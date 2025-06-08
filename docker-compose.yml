@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # API Gateway - Nginx Reverse Proxy
+  api-gateway:
+    image: nginx:1.25-alpine
+    container_name: api_gateway
+    ports:
+      # Main application traffic
+      - "${GATEWAY_HTTP_PORT:-80}:80"
+      - "${GATEWAY_HTTPS_PORT:-443}:443"
+      
+      # Service-specific ports
+      - "${KEYCLOAK_PORT:-8081}:8081"
+      - "${PGADMIN_PORT:-8080}:8080"
+      
+      # Monitoring and admin
+      - "${MONITORING_PORT:-9090}:9090"
+    
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - gateway_logs:/var/log/nginx
+      - ./scripts:/scripts:ro
+    
+    networks:
+      - microservices_network
+      - authservice_network
+    
+    environment:
+      - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    labels:
+      - "traefik.enable=false"
+      - "service.name=api-gateway"
+      - "service.version=1.0.0"
+
+volumes:
+  gateway_logs:
+    driver: local
+
+networks:
+  # Shared network for all microservices
+  microservices_network:
+    name: microservices_network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  
+  # Connect to existing AuthService network
+  authservice_network:
+    external: true
+    name: authservice_authservice_network
