@@ -14,6 +14,7 @@ services:
       # Service-specific ports
       - "${KEYCLOAK_PORT:-8081}:8081"
       - "${PGADMIN_PORT:-8080}:8080"
+      - "${PROJECTSERVICE_PORT:-5002}:5002"
       
       # Monitoring and admin
       - "${MONITORING_PORT:-9090}:9090"
@@ -28,6 +29,8 @@ services:
     networks:
       - microservices_network
       - authservice_network
+      - projectservice_network
+      - keycloak_network
     
     environment:
       - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
@@ -63,3 +66,13 @@ networks:
   authservice_network:
     external: true
     name: authservice_authservice_network
+  
+  # Connect to existing ProjectService network  
+  projectservice_network:
+    external: true
+    name: projectservice_projectservice_network
+  
+  # Connect to centralized Keycloak network
+  keycloak_network:
+    external: true
+    name: keycloak_network
